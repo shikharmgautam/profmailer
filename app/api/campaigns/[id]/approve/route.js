@@ -2,10 +2,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { getCampaign, updateCampaign, createScheduledJob, getUserProfile } from '@/lib/db';
 import { sendEmail } from '@/lib/gmail';
 import { startScheduler } from '@/lib/scheduler';
+import { authenticateRequest } from '@/lib/auth';
 
 startScheduler();
 
 export async function POST(request, { params }) {
+  const user = await authenticateRequest(request);
+  if (!user) {
+    return Response.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
+  }
+
   const { id } = await params;
   const body = await request.json();
   const { action, scheduledSendAt, recipientEmail, editedBody, editedSubject } = body;
@@ -16,6 +22,11 @@ export async function POST(request, { params }) {
 
   const campaign = await getCampaign(id);
   if (!campaign) return Response.json({ error: 'Campaign not found' }, { status: 404 });
+
+  // Authorization: Only owner can approve and send
+  if (campaign.user_id && String(campaign.user_id) !== String(user.id)) {
+    return Response.json({ error: 'Forbidden. You do not own this campaign.' }, { status: 403 });
+  }
 
   // Only allow approval if campaign is in a reviewable state
   const approvableStatuses = ['awaiting_approval', 'needs_clarification', 'failed'];

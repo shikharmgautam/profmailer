@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { EMAIL_PRESET_TEMPLATES } from '@/lib/templates';
-import UserSwitcher from '@/components/UserSwitcher';
+import AuthNav from '@/components/AuthNav';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -150,7 +150,7 @@ export default function ProfilePage() {
           <Link href="/" className="nav-link">Campaigns</Link>
           <Link href="/history" className="nav-link">History</Link>
           <Link href="/profile" className="nav-link active">Profile & Resume</Link>
-          <UserSwitcher />
+          <AuthNav />
         </div>
       </nav>
 

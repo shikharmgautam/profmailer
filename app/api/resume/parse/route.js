@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { updateUserProfile, getUserProfile } from '@/lib/db';
-import { getUserIdFromRequest } from '@/lib/user-auth';
+import { authenticateRequest } from '@/lib/auth';
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
@@ -32,7 +32,11 @@ async function callGenAI(contents) {
 
 export async function POST(request) {
   try {
-    const userId = getUserIdFromRequest(request);
+    const user = await authenticateRequest(request);
+    if (!user) {
+      return Response.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
+    }
+    const userId = user.id;
     const body = await request.json();
     const { resumeText, fileData, mimeType } = body;
 

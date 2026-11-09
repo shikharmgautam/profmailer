@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import UserSwitcher from '@/components/UserSwitcher';
+import AuthNav from '@/components/AuthNav';
 
 const STAGES = [
   { id: 1, name: 'Identifying professor', desc: 'Searching official faculty profiles' },
@@ -317,7 +317,7 @@ export default function Home() {
           <Link href="/history" className="nav-link">History</Link>
           <Link href="/profile" className="nav-link">Profile & Resume</Link>
           {gmailStatus !== null && <GmailBadge gmailStatus={gmailStatus} />}
-          <UserSwitcher onUserChange={loadProfile} />
+          <AuthNav onUserLoaded={loadProfile} />
         </div>
       </nav>
 

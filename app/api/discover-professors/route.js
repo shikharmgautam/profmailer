@@ -1,7 +1,7 @@
 import { getUserProfile } from '@/lib/db';
 import { getNIRFInfo } from '@/lib/nirf';
 import { geminiGenerate } from '@/lib/research';
-import { getUserIdFromRequest } from '@/lib/user-auth';
+import { authenticateRequest } from '@/lib/auth';
 
 // OpenAlex polite pool email
 const POLITE_EMAIL = 'team@profmailer.app';
@@ -76,7 +76,8 @@ Only return valid JSON inside a \`\`\`json markdown block.`;
 
 export async function POST(request) {
   try {
-    const userId = getUserIdFromRequest(request);
+    const user = await authenticateRequest(request);
+    const userId = user ? user.id : '1';
     const body = await request.json();
     let { field, region = 'India', targetDegree = 'PhD', applicantBackground = '' } = body;
 

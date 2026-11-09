@@ -1,10 +1,13 @@
 import { getGmailStatus } from '@/lib/gmail';
-import { getUserIdFromRequest } from '@/lib/user-auth';
+import { authenticateRequest } from '@/lib/auth';
 
 export async function GET(request) {
   try {
-    const userId = getUserIdFromRequest(request);
-    const status = await getGmailStatus(userId);
+    const user = await authenticateRequest(request);
+    if (!user) {
+      return Response.json({ connected: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const status = await getGmailStatus(user.id);
     return Response.json(status);
   } catch (err) {
     return Response.json({ connected: false, error: err.message });
