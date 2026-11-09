@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { EMAIL_PRESET_TEMPLATES } from '@/lib/templates';
+import UserSwitcher from '@/components/UserSwitcher';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -148,6 +150,7 @@ export default function ProfilePage() {
           <Link href="/" className="nav-link">Campaigns</Link>
           <Link href="/history" className="nav-link">History</Link>
           <Link href="/profile" className="nav-link active">Profile & Resume</Link>
+          <UserSwitcher />
         </div>
       </nav>
 
@@ -420,23 +423,78 @@ export default function ProfilePage() {
         {tab === 'template' && (
           <div className="form-section">
             <div className="form-section-title">
-              <span>📝</span> Default Email Template
+              <span>📝</span> Academic Cold-Email Strategy & Templates
             </div>
+
+            {/* Strategy & Best Practice Alert */}
+            <div className="alert alert-info mb-4" style={{ lineHeight: 1.6 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🎯</span> Proven Principles for Professor Cold Outreach:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.85rem' }}>
+                <li><strong>Optimal Length (160–230 words):</strong> Busy professors scan emails on their phones in 30 seconds.</li>
+                <li><strong>Zero Sycophancy:</strong> No artificial flattery or quotes of full 20-word paper titles. Refer naturally to their lab and 2–3 research thrusts.</li>
+                <li><strong>Selective Bridge:</strong> Highlight ONLY the 1–2 projects/tools from your resume that directly connect to their work.</li>
+              </ul>
+            </div>
+
+            {/* Presets Switcher */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text2)', marginBottom: 8 }}>
+                CHOOSE A PROVEN PRESET TEMPLATE:
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
+                {EMAIL_PRESET_TEMPLATES.map(p => (
+                  <div
+                    key={p.id}
+                    onClick={() => handleChange('default_template', p.template)}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '8px',
+                      border: form.default_template === p.template ? '2px solid var(--accent)' : '1px solid var(--border)',
+                      background: form.default_template === p.template ? 'rgba(99, 102, 241, 0.08)' : 'var(--card-bg)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 2 }}>{p.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text3)', marginBottom: 6 }}>{p.subtitle}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text2)', lineHeight: 1.4 }}>{p.description}</div>
+                    <div style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 500 }}>
+                      Target: {p.target} · {p.wordCount}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="form-group">
-              <div className="form-hint" style={{ marginBottom: 8 }}>
-                Available placeholders: <code>{'{professor_name}'}</code> <code>{'{university}'}</code> <code>{'{research_topic}'}</code> <code>{'{research_personalization}'}</code> <code>{'{user_name}'}</code> <code>{'{user_background}'}</code>
+              <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Template Editor</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text3)' }}>
+                  Placeholders will be populated with verified lab research & your projects
+                </span>
+              </div>
+              <div className="form-hint" style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {[
+                  '{professor_name}', '{user_name}', '{user_education}', '{university}',
+                  '{lab_name}', '{research_topics}', '{applicant_relevant_experience}',
+                  '{prior_skill_or_tool}', '{professor_domain}', '{lab_opportunity_areas}',
+                  '{target_degree}', '{user_signature}'
+                ].map(ph => (
+                  <code key={ph} style={{ fontSize: '0.75rem', padding: '2px 6px', background: 'var(--border)', borderRadius: 4 }}>
+                    {ph}
+                  </code>
+                ))}
               </div>
               <textarea
                 id="template-editor"
                 className="form-textarea"
                 value={form.default_template || ''}
                 onChange={e => handleChange('default_template', e.target.value)}
-                rows={14}
-                style={{ fontFamily: 'Georgia, serif', lineHeight: 1.7, fontSize: '0.875rem' }}
+                rows={16}
+                style={{ fontFamily: 'var(--font-mono, monospace)', lineHeight: 1.6, fontSize: '0.85rem' }}
               />
-            </div>
-            <div className="alert alert-info">
-              ℹ️ The AI will fill in placeholders using verified research on the professor's lab and your authentic profile.
             </div>
           </div>
         )}

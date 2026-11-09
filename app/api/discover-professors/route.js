@@ -1,6 +1,7 @@
 import { getUserProfile } from '@/lib/db';
 import { getNIRFInfo } from '@/lib/nirf';
 import { geminiGenerate } from '@/lib/research';
+import { getUserIdFromRequest } from '@/lib/user-auth';
 
 // OpenAlex polite pool email
 const POLITE_EMAIL = 'team@profmailer.app';
@@ -75,12 +76,13 @@ Only return valid JSON inside a \`\`\`json markdown block.`;
 
 export async function POST(request) {
   try {
+    const userId = getUserIdFromRequest(request);
     const body = await request.json();
     let { field, region = 'India', targetDegree = 'PhD', applicantBackground = '' } = body;
 
     // Inferred from profile if not provided
     if (!field || !field.trim()) {
-      const profile = await getUserProfile();
+      const profile = await getUserProfile(userId);
       field = profile?.research_interests || profile?.skills || 'Artificial Intelligence';
       if (!applicantBackground) {
         applicantBackground = [profile?.education, profile?.projects, profile?.background].filter(Boolean).join('. ');
@@ -102,11 +104,11 @@ export async function POST(request) {
       let professors = [];
 
       try {
-        // Fast, single-indexed query with 18s safe timeout
-        const url = `https://api.openalex.org/works?search=${encodeURIComponent(cleanedField)}&filter=institutions.country_code:IN&sort=publication_year:desc&per_page=45&mailto=${POLITE_EMAIL}`;
+        // Fast OpenAlex query with 6.5s safe timeout
+        const url = `https://api.openalex.org/works?search=${encodeURIComponent(cleanedField)}&filter=institutions.country_code:IN&sort=publication_year:desc&per_page=60&mailto=${POLITE_EMAIL}`;
         const res = await fetch(url, {
           headers: { 'User-Agent': 'ProfMailer/1.0 (https://profmailer.app; mailto:team@profmailer.app)' },
-          signal: AbortSignal.timeout(18000)
+          signal: AbortSignal.timeout(6500)
         });
 
         if (res.ok) {
@@ -141,14 +143,18 @@ export async function POST(request) {
           }
         }
       } catch (err) {
-        console.warn('OpenAlex India query error, activating fallback generator:', err.message);
+        console.warn('OpenAlex India query note (activating fast fallback):', err.message);
       }
 
-      // If OpenAlex returned fewer than 30 or timed out, use fallback
-      if (profMap.size < 20) {
-        const fallbacks = await generateIndiaFallbackProfessors(cleanedField, targetDegree);
-        for (const fb of fallbacks) {
-          if (!profMap.has(fb.name)) profMap.set(fb.name, fb);
+      // Ensure at least 30 verified professors within India
+      if (profMap.size < 30) {
+        try {
+          const fallbacks = await generateIndiaFallbackProfessors(cleanedField, targetDegree);
+          for (const fb of fallbacks) {
+            if (!profMap.has(fb.name)) profMap.set(fb.name, fb);
+          }
+        } catch (e) {
+          console.warn('Fallback error:', e.message);
         }
       }
 
@@ -174,11 +180,11 @@ export async function POST(request) {
 
       const fetchPromises = targetCountries.map(async (c) => {
         try {
-          // Optimized per-country search with 16s timeout
-          const url = `https://api.openalex.org/works?search=${encodeURIComponent(cleanedField)}&filter=institutions.country_code:${c.code}&sort=publication_year:desc&per_page=20&mailto=${POLITE_EMAIL}`;
+          // Optimized per-country search with 6.5s timeout
+          const url = `https://api.openalex.org/works?search=${encodeURIComponent(cleanedField)}&filter=institutions.country_code:${c.code}&sort=publication_year:desc&per_page=25&mailto=${POLITE_EMAIL}`;
           const res = await fetch(url, {
             headers: { 'User-Agent': 'ProfMailer/1.0 (https://profmailer.app; mailto:team@profmailer.app)' },
-            signal: AbortSignal.timeout(16000)
+            signal: AbortSignal.timeout(6500)
           });
           if (!res.ok) return [];
           const data = await res.json();
@@ -222,8 +228,10 @@ export async function POST(request) {
         }
       });
 
-      const resultsByCountry = await Promise.all(fetchPromises);
-      const allProfessors = resultsByCountry.flat();
+      const settled = await Promise.allSettled(fetchPromises);
+      const allProfessors = settled
+        .filter(s => s.status === 'fulfilled' && Array.isArray(s.value))
+        .flatMap(s => s.value);
 
       // Sort country-wise, and for India sort by NIRF
       const countryOrder = ['United States', 'United Kingdom', 'Canada', 'Germany', 'Switzerland', 'Singapore', 'Australia', 'India'];

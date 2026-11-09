@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import UserSwitcher from '@/components/UserSwitcher';
 
 function StatusBadge({ status }) {
   const labels = {
@@ -35,6 +36,7 @@ export default function HistoryPage() {
           <Link href="/" className="nav-link">New Campaign</Link>
           <Link href="/history" className="nav-link active">History</Link>
           <Link href="/profile" className="nav-link">Profile</Link>
+          <UserSwitcher />
         </div>
       </nav>
 

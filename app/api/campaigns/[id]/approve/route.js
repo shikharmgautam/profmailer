@@ -59,12 +59,14 @@ export async function POST(request, { params }) {
     });
 
     try {
-      const profile = await getUserProfile();
+      const campaignUserId = campaign.user_id || '1';
+      const profile = await getUserProfile(campaignUserId);
       const result = await sendEmail({
         to: finalRecipient,
         subject: finalSubject,
         body: finalBody,
         fromName: profile?.name || undefined,
+        userId: campaignUserId,
       });
 
       const sentAt = new Date().toISOString();

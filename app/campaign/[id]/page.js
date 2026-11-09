@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import UserSwitcher from '@/components/UserSwitcher';
 
 function StatusBadge({ status }) {
   const labels = {
@@ -254,6 +255,7 @@ export default function CampaignReview() {
           <Link href="/" className="nav-link">← New Campaign</Link>
           <Link href="/history" className="nav-link">History</Link>
           <StatusBadge status={campaign.status} />
+          <UserSwitcher />
         </div>
       </nav>
 

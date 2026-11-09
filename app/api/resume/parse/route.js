@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { updateUserProfile, getUserProfile } from '@/lib/db';
+import { getUserIdFromRequest } from '@/lib/user-auth';
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
@@ -31,6 +32,7 @@ async function callGenAI(contents) {
 
 export async function POST(request) {
   try {
+    const userId = getUserIdFromRequest(request);
     const body = await request.json();
     const { resumeText, fileData, mimeType } = body;
 
@@ -87,9 +89,9 @@ Respond in this exact JSON format:
       projects: parsed.projects || '',
       background: parsed.background || '',
       cv_text: resumeText || `${parsed.education}\nSkills: ${parsed.skills}\nProjects: ${parsed.projects}`,
-    });
+    }, userId);
 
-    const updated = await getUserProfile();
+    const updated = await getUserProfile(userId);
 
     return Response.json({
       success: true,

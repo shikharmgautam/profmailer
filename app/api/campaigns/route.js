@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { createCampaign, updateCampaign, getUserProfile } from '@/lib/db';
+import { getUserIdFromRequest } from '@/lib/user-auth';
 import {
   identifyProfessor,
   findPublications,
@@ -7,6 +8,7 @@ import {
   personalizeEmail,
   verifyEmailClaims,
   findProfessorEmail,
+  emailMatchesName,
 } from '@/lib/research';
 import { startScheduler } from '@/lib/scheduler';
 
@@ -16,6 +18,7 @@ startScheduler();
 export async function POST(request) {
   const body = await request.json();
   const { professorName, university, additionalInstructions } = body;
+  const userId = getUserIdFromRequest(request);
 
   if (!professorName?.trim() || !university?.trim()) {
     return Response.json({ error: 'Professor name and university are required.' }, { status: 400 });
@@ -23,16 +26,17 @@ export async function POST(request) {
 
   const campaignId = uuidv4();
 
-  // Create campaign record immediately
+  // Create campaign record immediately with user association
   await createCampaign({
     id: campaignId,
+    user_id: userId,
     professor_name: professorName.trim(),
     university: university.trim(),
     additional_instructions: additionalInstructions || null,
   });
 
   // Run research pipeline asynchronously (don't await)
-  runResearchPipeline(campaignId, professorName.trim(), university.trim(), additionalInstructions).catch(err => {
+  runResearchPipeline(campaignId, professorName.trim(), university.trim(), additionalInstructions, userId).catch(err => {
     console.error('Research pipeline error:', err);
     updateCampaign(campaignId, {
       status: 'failed',
@@ -44,8 +48,8 @@ export async function POST(request) {
   return Response.json({ campaignId }, { status: 201 });
 }
 
-async function runResearchPipeline(campaignId, professorName, university, additionalInstructions) {
-  const profile = await getUserProfile();
+async function runResearchPipeline(campaignId, professorName, university, additionalInstructions, userId = '1') {
+  const profile = await getUserProfile(userId);
 
   // Stage 1: Identify professor
   await updateCampaign(campaignId, {
@@ -117,6 +121,13 @@ async function runResearchPipeline(campaignId, professorName, university, additi
       recipientEmail = emailResult.parsed.email;
       recipientEmailSource = emailResult.parsed.source_url || recipientEmailSource;
     }
+  }
+
+  // Strict validation: Reject any email that fails name verification
+  if (recipientEmail && !emailMatchesName(recipientEmail, prof.full_name)) {
+    console.warn(`Rejecting mismatched email ${recipientEmail} for professor ${prof.full_name}`);
+    recipientEmail = null;
+    recipientEmailSource = null;
   }
 
   const researchData = {
